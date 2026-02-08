@@ -23,6 +23,12 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Download trained model from release
+        run: |
+          mkdir -p models
+          curl -L https://github.com/tanishkadamba01/ai-trading-model/releases/download/v0.1/xgb_tp0023_prob065.pkl \
+            -o models/xgb_tp0023_prob065.pkl
+
       - name: Run paper trading
         run: |
           python paper_trade.py
