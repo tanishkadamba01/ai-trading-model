@@ -25,9 +25,10 @@ jobs:
 
       - name: Download trained model from release
         run: |
-          mkdir -p models
-          curl -L https://github.com/tanishkadamba01/ai-trading-model/releases/download/v0.1/xgb_tp_sl_model.pkl \
-            -o models/xgb_tp_sl_model.pkl.pkl
+           mkdir -p models
+           curl -L https://github.com/tanishkadamba01/ai-trading-model/releases/download/v0.1/xgb_tp_sl_model.pkl \
+           -o models/xgb_tp_sl_model.pkl
+
 
       - name: Run paper trading
         run: |
