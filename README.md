@@ -79,7 +79,7 @@ python train_xgboost.py
 6. Run backtest
 python backtest.py
 7. (Optional) Run parameter sweep
-python run_parameter_sweep.py
+python run_parameter_sweep.py (create a file named tpandprobanalysis.xlsx)
 
 ## 📊 Baseline Backtest Results
 
