@@ -1,3 +1,6 @@
+# Paper trading
+models/
+
 # Data
 data/
 *.parquet
