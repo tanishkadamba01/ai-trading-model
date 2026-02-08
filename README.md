@@ -63,7 +63,7 @@ The repository intentionally excludes datasets and trained models to keep it lig
 ## ▶️ How to Run
 
 ### 1. Clone the repository
-```bash
+
 git clone https://github.com/tanishkadamba01/ai-trading-model.git
 cd ai-trading-model
 2. Create and activate a virtual environment
@@ -128,7 +128,7 @@ ai-trading-model/
 ## ⚙️ How to Run
 
 1. **Clone the repository**
-```bash
+
 git clone https://github.com/tanishkadamba01/ai-trading-model.git
 cd ai-trading-model
 
@@ -140,6 +140,19 @@ pip install -r requirements.txt
 python train_xgboost.py
 python backtest.py
 python run_parameter_sweep.py
+
+## 🤖 Paper Trading
+
+Paper trading is fully automated using GitHub Actions.
+
+On a scheduled basis, the system:
+- fetches recent market data from the exchange
+- computes technical features
+- generates ML-based trade signals
+- exits without deploying real capital
+
+This setup enables reproducible, infrastructure-free evaluation.
+
 
 👤 Author
 
