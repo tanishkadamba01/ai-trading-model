@@ -60,6 +60,27 @@ The repository intentionally excludes datasets and trained models to keep it lig
 
 ---
 
+## ▶️ How to Run
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/tanishkadamba01/ai-trading-model.git
+cd ai-trading-model
+2. Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+3. Install dependencies
+pip install -r requirements.txt
+4. Download and prepare data
+python download_data.py
+python open_data.py
+5. Train the model
+python train_xgboost.py
+6. Run backtest
+python backtest.py
+7. (Optional) Run parameter sweep
+python run_parameter_sweep.py
+
 ## 📊 Baseline Backtest Results
 
 **Selected Baseline Configuration**
