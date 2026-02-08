@@ -4,6 +4,9 @@ import numpy as np
 import joblib
 from datetime import datetime
 import os
+import joblib
+import sys
+
 
 from train_xgboost import train_model
 
@@ -20,6 +23,15 @@ exchange = ccxt.binance({
     "enableRateLimit": True,
     "options": {"defaultType": "future"}
 })
+
+MODEL_PATH = "models/xgb_tp_sl_model.pkl"
+
+def load_model():
+    if not os.path.exists(MODEL_PATH):
+        print("❌ Model file not found. Paper trading skipped.")
+        sys.exit(0)
+    return joblib.load(MODEL_PATH)
+
 
 
 def fetch_latest_candles(limit=LOOKBACK):
@@ -112,7 +124,7 @@ def run_paper_trade():
     # dummy labels only if model needs training
     y = (df["close"].shift(-1) > df["close"]).astype(int)
 
-    model = load_or_train_model(X, y)
+    model = load_model()
 
     latest_X = X.iloc[[-1]]
     prob = model.predict_proba(latest_X)[0, 1]
