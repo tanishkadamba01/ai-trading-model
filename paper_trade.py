@@ -7,8 +7,15 @@ import os
 import joblib
 import sys
 
+MODEL_PATH = "models/xgb_tp_sl_model.pkl"
 
-from train_xgboost import train_model
+def load_model():
+    if not os.path.exists(MODEL_PATH):
+        print("Model file not found. Exiting.")
+        sys.exit(0)
+    return joblib.load(MODEL_PATH)
+
+model = load_model()
 
 # ---------------- CONFIG ----------------
 SYMBOL = "BTC/USDT"
