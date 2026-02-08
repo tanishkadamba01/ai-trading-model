@@ -1,7 +1,8 @@
-numpy
+ccxt
 pandas
+numpy
 scikit-learn
+joblib
 xgboost
-matplotlib
-seaborn
+tqdm
 pyarrow
