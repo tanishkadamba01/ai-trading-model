@@ -1,23 +1,39 @@
 import pandas as pd
 import mplfinance as mpf
+import argparse
 
-# Load the parquet file
-df = pd.read_parquet("data/raw/btcusdt_1m.parquet")
 
-# Set timestamp as index
-df = df.set_index("timestamp")
+def main():
+    parser = argparse.ArgumentParser(description="Plot candlestick chart from parquet data.")
+    parser.add_argument(
+        "--path",
+        default="data/raw/btcusdt_1m.parquet",
+        help="Path to OHLCV parquet file.",
+    )
+    parser.add_argument(
+        "--rows",
+        type=int,
+        default=500,
+        help="Number of latest rows to plot.",
+    )
+    args = parser.parse_args()
 
-# Ensure correct column order
-df = df[["open", "high", "low", "close", "volume"]]
+    df = pd.read_parquet(args.path)
+    df = df.set_index("timestamp")
+    df = df[["open", "high", "low", "close", "volume"]]
 
-df_last = df.tail(500)
+    df_last = df.tail(args.rows)
 
-mpf.plot(
-    df_last,
-    type="candle",
-    volume=True,
-    style="charles",
-    title="BTCUSDT 1-minute Candles",
-    ylabel="Price (USDT)",
-    ylabel_lower="Volume"
-)
+    mpf.plot(
+        df_last,
+        type="candle",
+        volume=True,
+        style="charles",
+        title="BTCUSDT 1-minute Candles",
+        ylabel="Price (USDT)",
+        ylabel_lower="Volume"
+    )
+
+
+if __name__ == "__main__":
+    main()

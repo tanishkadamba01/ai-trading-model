@@ -1,161 +1,168 @@
-# ai-trading-model
+﻿# AI Trading Model (v0.2)
 
-An end-to-end **AI-powered trading system** built in Python, designed to explore machine learning applications in algorithmic trading.  
-This project focuses on building a **reproducible research pipeline** covering data processing, feature engineering, model training, signal generation, and realistic backtesting with risk management.
+AI Trading Model is a Python-based research project for building and evaluating an ML-driven BTC/USDT trading pipeline on 1-minute candles.
 
-> 📌 This is a research and learning project, not a production trading system.
+> This repository is for research and learning. It is **not** production trading software.
 
----
+## What is new in v0.2
 
-## 🔍 Overview
+- Unified backtest engine for both non-leverage and leverage trade logs.
+- Realistic leverage simulation based on capital, notional exposure, and fee impact.
+- One-command full workflow runner (`run_full_workflow.py`).
+- Improved parameter sweep runner with clean CLI options.
+- Cleaned scripts and publish-ready documentation.
 
-This project implements a complete workflow:  
-from raw market data → machine learning predictions → trade execution simulation → performance evaluation.
+## Repository Structure
 
-The goal is **not** to maximize short-term profit, but to:
-- design a clean ML pipeline
-- study probabilistic trade signals
-- evaluate strategies using realistic backtesting
-- understand risk, drawdowns, and robustness
+```text
+.
+|-- backtest.py
+|-- download_data.py
+|-- features.py
+|-- labeling.py
+|-- train_test_split.py
+|-- train_xgboost.py
+|-- trade_simulation.py
+|-- trade_simulation_leverage.py
+|-- run_full_workflow.py
+|-- run_parameter_sweep.py
+|-- paper_trade.py
+|-- plot_candles.py
+|-- open_data.py
+|-- live/
+|   `-- live_trading.py
+|-- data/
+|   |-- raw/
+|   |-- features/
+|   |-- labeled/
+|   |-- splits/
+|   |-- models/
+|   `-- results/
+|-- requirements.txt
+`-- README.md
+```
 
-The repository intentionally excludes datasets and trained models to keep it lightweight and reproducible.
+## Requirements
 
----
+- Python 3.10+
+- pip
+- Internet access (for `download_data.py`, `paper_trade.py`, and `live/live_trading.py`)
 
-## 🧠 Project Pipeline
+Install dependencies:
 
-1. **Data Collection**
-   - Market data download and preprocessing
-   - Candle-based time series handling
+```bash
+pip install -r requirements.txt
+```
 
-2. **Feature Engineering**
-   - Technical indicators
-   - Volatility measures
-   - Rolling statistical features
+## Quick Start
 
-3. **Labeling**
-   - Supervised labels based on future price movement
-   - Risk-aware target construction
+### 1. Clone
 
-4. **Train / Test Split**
-   - Time-series–aware splitting
-   - Avoids data leakage
-
-5. **Model Training**
-   - Gradient-boosted decision trees (XGBoost)
-   - Probabilistic output (`predict_proba`)
-
-6. **Signal Generation**
-   - Probability thresholding
-   - Volatility regime filtering
-
-7. **Backtesting**
-   - Event-driven trade simulation
-   - Take-profit & stop-loss logic
-   - Equity tracking and drawdown analysis
-
-8. **Experimentation**
-   - Parameter sweeps for probability thresholds and TP levels
-   - Result aggregation for comparison
-
----
-
-## ▶️ How to Run
-
-### 1. Clone the repository
-
+```bash
 git clone https://github.com/tanishkadamba01/ai-trading-model.git
 cd ai-trading-model
-2. Create and activate a virtual environment
+```
+
+### 2. Create virtual environment
+
+Windows PowerShell:
+
+```powershell
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-3. Install dependencies
+.\venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
-4. Download and prepare data
+```
+
+## Run the Project
+
+### Option A: Full workflow (recommended)
+
+Runs feature generation, labeling, splits, training, both simulations, and both backtests:
+
+```bash
+python run_full_workflow.py
+```
+
+With custom parameters:
+
+```bash
+python run_full_workflow.py --tp 0.0023 --prob 0.65 --leverage 3.0 --initial-capital 1000 --capital-fraction 1.0
+```
+
+Include fresh market download:
+
+```bash
+python run_full_workflow.py --download-data
+```
+
+### Option B: Manual pipeline
+
+```bash
 python download_data.py
-python open_data.py
-5. Train the model
+python features.py
+python labeling.py 0.0023
+python train_test_split.py
 python train_xgboost.py
-6. Run backtest
-python backtest.py
-7. (Optional) Run parameter sweep
-python run_parameter_sweep.py (create a file named tpandprobanalysis.xlsx)
+python trade_simulation.py 0.0023 0.65
+python backtest.py --trades-path data/results/trades.parquet --label "No Leverage"
+python trade_simulation_leverage.py 0.0023 0.65 3.0
+python backtest.py --trades-path data/results/trades_leverage.parquet --leverage-hint 3.0 --label "With Leverage"
+```
 
-## 📊 Baseline Backtest Results
+### Option C: Parameter sweep
 
-**Selected Baseline Configuration**
-- Probability Threshold: **0.70**
-- Take Profit: **0.0017**
-- Stop Loss: Fixed (risk-defined)
-- Leverage: **None**
-
-**Performance Summary**
-- Total Trades: ~37
-- Win Rate: ~78%
-- Profit Factor: ~2.0
-- Maximum Drawdown: ~0.32%
-- Final Equity: Positive growth without leverage
-
-📌 Results are based on historical backtests only and do **not** represent live trading performance.
-
----
-
-## 🗂 Repository Structure
-
-ai-trading-model/
-│
-├── backtest.py
-├── trade_simulation.py
-├── run_parameter_sweep.py
-├── train_xgboost.py
-├── train_test_split.py
-├── features.py
-├── labeling.py
-├── download_data.py
-├── open_data.py
-├── plot_candles.py
-│
-├── live/
-│ └── live_trading.py
-│
-├── README.md
-├── requirements.txt
-└── .gitignore
-
-
----
-
-## ⚙️ How to Run
-
-1. **Clone the repository**
-
-git clone https://github.com/tanishkadamba01/ai-trading-model.git
-cd ai-trading-model
-
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-pip install -r requirements.txt
-
-python train_xgboost.py
-python backtest.py
+```bash
 python run_parameter_sweep.py
+```
 
-## 🤖 Paper Trading
+Custom sweep example:
 
-Paper trading is fully automated using GitHub Actions.
+```bash
+python run_parameter_sweep.py --tp-values 0.0018,0.0020,0.0022 --prob-values 0.65,0.70 --leverage 3.0
+```
 
-On a scheduled basis, the system:
-- fetches recent market data from the exchange
-- computes technical features
-- generates ML-based trade signals
-- exits without deploying real capital
+Results are saved to `tpandprobanalysis.xlsx`.
 
-This setup enables reproducible, infrastructure-free evaluation.
+## Main Outputs
 
+- `data/features/btcusdt_features.parquet`
+- `data/labeled/btcusdt_labeled.parquet`
+- `data/splits/*.parquet`
+- `data/models/xgb_tp_sl_model.pkl`
+- `data/results/trades.parquet`
+- `data/results/trades_leverage.parquet`
+- `tpandprobanalysis.xlsx`
 
-👤 Author
+## Script Reference
 
-Built by a first-year Computer Science Engineering student exploring machine learning, quantitative research, and system design through hands-on projects.
+- `download_data.py`: Downloads BTC/USDT 1m candles from Binance (via `ccxt`).
+- `features.py`: Builds technical and statistical features.
+- `labeling.py`: Creates TP/SL outcome labels (supports TP CLI argument).
+- `train_test_split.py`: Time-order-preserving split into train/val/test.
+- `train_xgboost.py`: Trains and evaluates XGBoost model.
+- `trade_simulation.py`: Non-leverage signal and trade simulation.
+- `trade_simulation_leverage.py`: Leverage simulation with capital/notional fee modeling.
+- `backtest.py`: Unified backtest for both trade outputs.
+- `run_full_workflow.py`: One-command end-to-end workflow runner.
+- `run_parameter_sweep.py`: TP/probability sweep for comparative analysis.
 
-If you’re interested in AI, ML, or quantitative trading, feel free to connect or share feedback.
+## Risk Disclaimer
+
+- Historical backtest performance does not guarantee live performance.
+- Trading involves substantial financial risk.
+
+## Author
+
+Built by Tanish Kadamba as a machine learning and quantitative trading research project.

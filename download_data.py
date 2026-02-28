@@ -1,77 +1,80 @@
 import ccxt
 import pandas as pd
 import time
+import os
 from tqdm import tqdm
 
 exchange = ccxt.binance({
     "enableRateLimit": True,
     "options": {
-        "defaultType": "future"  # VERY IMPORTANT
+        "defaultType": "future"
     }
 })
 
 symbol = "BTC/USDT"
 timeframe = "1m"
 
-months_of_data = 6  # change to 12 later if you want
+months_of_data = 6
 
-since_timestamp = exchange.parse8601(
-    (pd.Timestamp.utcnow() - pd.DateOffset(months=months_of_data))
-    .strftime("%Y-%m-%d %H:%M:%S")
-)
+def main():
+    since_timestamp = exchange.parse8601(
+        (pd.Timestamp.utcnow() - pd.DateOffset(months=months_of_data))
+        .strftime("%Y-%m-%d %H:%M:%S")
+    )
 
-limit = 1500  # max Binance allows per request
-all_candles = []
+    limit = 1500  # max Binance allows per request
+    all_candles = []
+    current_since = since_timestamp
 
-current_since = since_timestamp
+    with tqdm(desc="Downloading BTCUSDT 1m data") as progress:
+        while True:
+            candles = exchange.fetch_ohlcv(
+                symbol=symbol,
+                timeframe=timeframe,
+                since=current_since,
+                limit=limit
+            )
 
-with tqdm(desc="Downloading BTCUSDT 1m data") as progress:
-    while True:
-        candles = exchange.fetch_ohlcv(
-            symbol=symbol,
-            timeframe=timeframe,
-            since=current_since,
-            limit=limit
-        )
+            if not candles:
+                break
 
-        if not candles:
-            break
+            all_candles.extend(candles)
 
-        all_candles.extend(candles)
+            current_since = candles[-1][0] + 60_000
+            progress.update(len(candles))
 
-        # move forward 1 minute
-        current_since = candles[-1][0] + 60_000
+            if current_since >= exchange.milliseconds():
+                break
 
-        progress.update(len(candles))
+            time.sleep(exchange.rateLimit / 1000)
 
-        if current_since >= exchange.milliseconds():
-            break
+    df = pd.DataFrame(
+        all_candles,
+        columns=["timestamp", "open", "high", "low", "close", "volume"]
+    )
 
-        time.sleep(exchange.rateLimit / 1000)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+    df = df.drop_duplicates(subset="timestamp")
+    df = df.sort_values("timestamp")
+    df = df.reset_index(drop=True)
 
-df = pd.DataFrame(
-    all_candles,
-    columns=["timestamp", "open", "high", "low", "close", "volume"]
-)
+    expected_times = pd.date_range(
+        start=df["timestamp"].iloc[0],
+        end=df["timestamp"].iloc[-1],
+        freq="1min",
+        tz="UTC"
+    )
+    missing = expected_times.difference(df["timestamp"])
 
-df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-df = df.drop_duplicates(subset="timestamp")
-df = df.sort_values("timestamp")
-df = df.reset_index(drop=True)
+    print("Total candles:", len(df))
+    print("Missing candles:", len(missing))
 
-expected_times = pd.date_range(
-    start=df["timestamp"].iloc[0],
-    end=df["timestamp"].iloc[-1],
-    freq="1min",
-    tz="UTC"
-)
+    os.makedirs("data/raw", exist_ok=True)
+    output_path = "data/raw/btcusdt_1m.parquet"
+    df.to_parquet(output_path, engine="pyarrow")
 
-missing = expected_times.difference(df["timestamp"])
+    print("Saved file to:", output_path)
 
-print("Total candles:", len(df))
-print("Missing candles:", len(missing))
 
-output_path = "data/raw/btcusdt_1m.parquet"
-df.to_parquet(output_path, engine="pyarrow")
-
-print("Saved file to:", output_path)
+if __name__ == "__main__":
+    main()

@@ -7,4 +7,23 @@ data/
 *.csv
 *.xlsx
 
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+
+# Build / distribution
+dist/
+build/
+.dist/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

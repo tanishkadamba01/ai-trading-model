@@ -1,51 +1,39 @@
-import ccxt
-import pandas as pd
-import numpy as np
-import joblib
+﻿import os
 from datetime import datetime
-import os
+
+import ccxt
 import joblib
-import sys
+import numpy as np
+import pandas as pd
 
-MODEL_PATH = "models/xgb_tp_sl_model.pkl"
 
-def load_model():
-    if not os.path.exists(MODEL_PATH):
-        print("Model file not found. Exiting.")
-        sys.exit(0)
-    return joblib.load(MODEL_PATH)
-
-model = load_model()
-
-# ---------------- CONFIG ----------------
 SYMBOL = "BTC/USDT"
 TIMEFRAME = "1m"
 LOOKBACK = 200
-
 PROB_THRESHOLD = 0.65
-MODEL_PATH = "models/xgb_tp_sl_model.pkl"
-# ----------------------------------------
+MODEL_PATH = "data/models/xgb_tp_sl_model.pkl"
+
+FEATURE_COLUMNS = [
+    "log_ret_1", "log_ret_3", "log_ret_5",
+    "candle_body", "candle_range",
+    "rsi_5", "rsi_9", "rsi_14",
+    "ema9_dist", "ema21_dist",
+    "atr_7", "atr_14",
+    "ret_std_5", "ret_std_15",
+    "vol_zscore", "vol_spike",
+]
 
 exchange = ccxt.binance({
     "enableRateLimit": True,
-    "options": {"defaultType": "future"}
+    "options": {"defaultType": "future"},
 })
-
-MODEL_PATH = "models/xgb_tp_sl_model.pkl"
-
-def load_model():
-    if not os.path.exists(MODEL_PATH):
-        print("❌ Model file not found. Paper trading skipped.")
-        sys.exit(0)
-    return joblib.load(MODEL_PATH)
-
 
 
 def fetch_latest_candles(limit=LOOKBACK):
     ohlcv = exchange.fetch_ohlcv(SYMBOL, TIMEFRAME, limit=limit)
     df = pd.DataFrame(
         ohlcv,
-        columns=["timestamp", "open", "high", "low", "close", "volume"]
+        columns=["timestamp", "open", "high", "low", "close", "volume"],
     )
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     df.set_index("timestamp", inplace=True)
@@ -99,48 +87,31 @@ def compute_features(df):
     return df
 
 
-def load_or_train_model(X, y):
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-
-    os.makedirs("models", exist_ok=True)
-    model = train_model(X, y)
-    joblib.dump(model, MODEL_PATH)
-    return model
+def load_model():
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(
+            f"Model not found at {MODEL_PATH}. Run train_xgboost.py first."
+        )
+    return joblib.load(MODEL_PATH)
 
 
 def run_paper_trade():
     now = datetime.utcnow()
+    model = load_model()
 
     df = fetch_latest_candles()
     df = compute_features(df)
 
-    feature_columns = [
-        "log_ret_1", "log_ret_3", "log_ret_5",
-        "candle_body", "candle_range",
-        "rsi_5", "rsi_9", "rsi_14",
-        "ema9_dist", "ema21_dist",
-        "atr_7", "atr_14",
-        "ret_std_5", "ret_std_15",
-        "vol_zscore", "vol_spike"
-    ]
+    X_live = df[FEATURE_COLUMNS].dropna()
+    if X_live.empty:
+        print("Not enough candles to compute all features yet.")
+        return
 
-    df = df.dropna()
-    X = df[feature_columns]
-
-    # dummy labels only if model needs training
-    y = (df["close"].shift(-1) > df["close"]).astype(int)
-
-    model = load_model()
-
-    latest_X = X.iloc[[-1]]
+    latest_X = X_live.iloc[[-1]]
     prob = model.predict_proba(latest_X)[0, 1]
-
     signal = "LONG" if prob >= PROB_THRESHOLD else "NO_TRADE"
 
-    print(
-        f"[{now}] {SYMBOL} | Prob={prob:.4f} | Signal={signal}"
-    )
+    print(f"[{now}] {SYMBOL} | Prob={prob:.4f} | Signal={signal}")
 
 
 if __name__ == "__main__":

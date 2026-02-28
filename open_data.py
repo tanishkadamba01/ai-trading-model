@@ -1,11 +1,22 @@
 import pandas as pd
+import argparse
 
-# Load the parquet file
-df = pd.read_parquet("C:\\Users\\Tanish\\Desktop\\TradingMLModel\\data\\raw\\btcusdt_1m.parquet")
 
-# Show first 5 rows
-print(df.head())
+def main():
+    parser = argparse.ArgumentParser(description="Inspect a parquet data file.")
+    parser.add_argument(
+        "--path",
+        default="data/raw/btcusdt_1m.parquet",
+        help="Path to parquet file.",
+    )
+    args = parser.parse_args()
 
-# Show basic info
-print("\nData info:")
-print(df.info())
+    df = pd.read_parquet(args.path)
+
+    print(df.head())
+    print("\nData info:")
+    print(df.info())
+
+
+if __name__ == "__main__":
+    main()

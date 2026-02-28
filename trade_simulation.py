@@ -1,7 +1,8 @@
-import pandas as pd
-import numpy as np
-import joblib
+import os
 import sys
+
+import joblib
+import pandas as pd
 
 
 # Load market data
@@ -30,31 +31,31 @@ signals = pd.DataFrame(index=X_test.index)
 signals["prob"] = probs
 
 # Command-line arguments
-TP_PCT = float(sys.argv[1])
-PROB_THRESHOLD = float(sys.argv[2])
-
+TP_PCT = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0023
+PROB_THRESHOLD = float(sys.argv[2]) if len(sys.argv) > 2 else 0.65
 
 signals["atr"] = df.loc[signals.index, "atr_14"]
 signals["atr_med"] = df.loc[signals.index, "atr_med"]
 
 signals["enter"] = (
-    (signals["prob"] > PROB_THRESHOLD) &
-    (signals["atr"] > 1.2 * signals["atr_med"])
+    (signals["prob"] > PROB_THRESHOLD)
+    & (signals["atr"] > 1.2 * signals["atr_med"])
 )
 
 SL_PCT = 0.0008
 MAX_HOLD = 5
-FEE_PCT = 0.0004   # 0.04% per side (Binance-like)
+FEE_PCT = 0.0004  # 0.04% per side (Binance-like)
 
 trades = []
 
 for entry_time in signals[signals["enter"]].index:
-
     entry_price = df.loc[entry_time, "close"]
     tp_price = entry_price * (1 + TP_PCT)
     sl_price = entry_price * (1 - SL_PCT)
 
-    future = df.loc[entry_time:].iloc[1:MAX_HOLD+1]
+    future = df.loc[entry_time:].iloc[1 : MAX_HOLD + 1]
+    if future.empty:
+        continue
 
     exit_price = None
     exit_time = None
@@ -88,17 +89,18 @@ for entry_time in signals[signals["enter"]].index:
         "result": result,
         "gross_return": gross_ret,
         "net_return": net_ret,
-        "pnl": net_ret
+        "pnl": net_ret,
     })
 
 trades_df = pd.DataFrame(trades)
 
 print("Total trades:", len(trades_df))
 
+os.makedirs("data/results", exist_ok=True)
+
 if trades_df.empty:
     print("No trades executed")
 
-    # Create empty but valid outputs
     avg_return = 0.0
     win_rate = 0.0
     final_equity = 1.0
@@ -109,13 +111,9 @@ if trades_df.empty:
     print("\nFinal equity:", final_equity)
     print("Max drawdown:", max_drawdown)
 
-    # Save empty trades file so pipeline does not break
     trades_df.to_parquet("data/results/trades.parquet")
-
     print("Trades saved")
-    sys.exit(0)   # ⬅️ VERY IMPORTANT
-
-
+    sys.exit(0)
 
 print("\nAverage net return:", trades_df["net_return"].mean())
 print("Win rate:", (trades_df["net_return"] > 0).mean())

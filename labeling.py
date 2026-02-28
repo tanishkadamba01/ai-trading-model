@@ -1,26 +1,20 @@
 import pandas as pd
-import numpy as np
 import os
 import sys
 
-os.makedirs("data/labeled", exist_ok=True)
-
-df = pd.read_parquet("data/raw/btcusdt_1m.parquet")
-df = df.set_index("timestamp").sort_index()
-
-X = pd.read_parquet("data/features/btcusdt_features.parquet")
-
-TP_PCT = float(sys.argv[1])   
 SL_PCT = 0.0008   # -0.08%
 MAX_HOLD = 5      # candles (minutes)
 
-def label_trade(df, entry_time):
+
+def label_trade(df, entry_time, tp_pct):
     entry_price = df.loc[entry_time, "close"]
 
-    tp_price = entry_price * (1 + TP_PCT)
+    tp_price = entry_price * (1 + tp_pct)
     sl_price = entry_price * (1 - SL_PCT)
 
-    future = df.loc[entry_time:].iloc[1:MAX_HOLD+1]
+    future = df.loc[entry_time:].iloc[1:MAX_HOLD + 1]
+    if future.empty:
+        return -1
 
     for _, row in future.iterrows():
         if row["high"] >= tp_price:
@@ -30,26 +24,40 @@ def label_trade(df, entry_time):
 
     return -1  # timeout
 
-labels = []
 
-for ts in X.index:
-    label = label_trade(df, ts)
-    labels.append(label)
+def main():
+    os.makedirs("data/labeled", exist_ok=True)
 
-y = pd.Series(labels, index=X.index, name="label")
+    tp_pct = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0023
+    print(f"Labeling with TP_PCT={tp_pct}")
 
-print(y.value_counts())
-print(y.value_counts(normalize=True))
+    df = pd.read_parquet("data/raw/btcusdt_1m.parquet")
+    df = df.set_index("timestamp").sort_index()
 
-mask = y != -1
-X_labeled = X.loc[mask]
-y_labeled = y.loc[mask]
+    X = pd.read_parquet("data/features/btcusdt_features.parquet")
 
-data = X_labeled.copy()
-data["label"] = y_labeled
+    labels = []
+    for ts in X.index:
+        labels.append(label_trade(df, ts, tp_pct))
 
-data.to_parquet("data/labeled/btcusdt_labeled.parquet")
+    y = pd.Series(labels, index=X.index, name="label")
 
-print("Labeled dataset saved")
-print("Shape:", data.shape)
-print(data["label"].value_counts())
+    print(y.value_counts())
+    print(y.value_counts(normalize=True))
+
+    mask = y != -1
+    X_labeled = X.loc[mask]
+    y_labeled = y.loc[mask]
+
+    data = X_labeled.copy()
+    data["label"] = y_labeled
+
+    data.to_parquet("data/labeled/btcusdt_labeled.parquet")
+
+    print("Labeled dataset saved")
+    print("Shape:", data.shape)
+    print(data["label"].value_counts())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,26 +1,30 @@
-import ccxt
-import pandas as pd
-import numpy as np
-import joblib
+import os
 import time
 from datetime import datetime
+
+import ccxt
+import joblib
+import numpy as np
+import pandas as pd
 
 model = joblib.load("data/models/xgb_tp_sl_model.pkl")
 
 exchange = ccxt.binance({
     "enableRateLimit": True,
-    "options": {"defaultType": "future"}
+    "options": {"defaultType": "future"},
 })
+
 
 def fetch_latest_candles(symbol="BTC/USDT", timeframe="1m", limit=200):
     ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
     df = pd.DataFrame(
         ohlcv,
-        columns=["timestamp", "open", "high", "low", "close", "volume"]
+        columns=["timestamp", "open", "high", "low", "close", "volume"],
     )
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
     df.set_index("timestamp", inplace=True)
     return df
+
 
 def compute_features(df):
     df = df.copy()
@@ -54,7 +58,7 @@ def compute_features(df):
     high_close = (df["high"] - df["close"].shift()).abs()
     low_close = (df["low"] - df["close"].shift()).abs()
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    
+
     df["atr_7"] = tr.rolling(7).mean()
     df["atr_14"] = tr.rolling(14).mean()
 
@@ -68,10 +72,12 @@ def compute_features(df):
 
     return df
 
+
 TP_PCT = 0.0020
 SL_PCT = 0.0008
 MAX_HOLD = 5
 PROB_THRESHOLD = 0.65
+
 
 while True:
     try:
@@ -87,7 +93,7 @@ while True:
             "ema9_dist", "ema21_dist",
             "atr_7", "atr_14",
             "ret_std_5", "ret_std_15",
-            "vol_zscore", "vol_spike"
+            "vol_zscore", "vol_spike",
         ]
         X_live = latest[feature_columns].dropna()
 
@@ -100,18 +106,19 @@ while True:
         log_row = {
             "time": datetime.utcnow(),
             "price": latest["close"].values[0],
-            "probability": prob
+            "probability": prob,
         }
 
+        log_path = "live/live_signals_log.csv"
         pd.DataFrame([log_row]).to_csv(
-            "live/live_signals_log.csv",
+            log_path,
             mode="a",
-            header=False,
-            index=False
+            header=not os.path.exists(log_path),
+            index=False,
         )
 
         if prob > PROB_THRESHOLD:
-            print("📈 SIGNAL:", log_row)
+            print("SIGNAL:", log_row)
 
         time.sleep(60)
 
